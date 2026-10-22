@@ -47,12 +47,15 @@
   --pA:#5B93F0; --pB:#E9B933; --pC:#F06A5D; --pD:#45BE7C;
   --good:#45BE7C; --warn:#E9A23B; --bad:#F06A5D; color-scheme:dark}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0}
+img{max-width:100%}
 html,body{background:var(--bg);color:var(--fg)}
 body{font-family:var(--body);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
 .wrap{max-width:600px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px 120px}
 h1,h2,h3{font-family:var(--display);font-weight:700;letter-spacing:.01em;margin:0;text-wrap:balance}
-h1{font-size:40px;line-height:1.05}
+h1{font-size:30px;line-height:1.05}
 h2{font-size:22px}
 h3{font-size:19px;font-weight:600}
 .num{font-variant-numeric:tabular-nums}
@@ -204,7 +207,7 @@ details>summary{cursor:pointer;font-weight:600;color:var(--muted);padding:6px 0}
 <body>
 <!-- ============ PART 3: HTML — the structure of the page ============ -->
 <div class="wrap" id="app">
-  <div class="top"><div><div class="eyebrow" id="today"></div><h1>Neel's Gym Log</h1></div><div class="status" id="status">Connecting…</div></div>
+  <div class="top"><div><div class="eyebrow" id="today"></div><h1>Gym Log</h1></div><div class="status" id="status">Connecting…</div></div>
   <div class="empty">Loading your exercises and history…</div>
 </div>
 <div class="restbar" id="rest" hidden></div>
@@ -212,6 +215,7 @@ details>summary{cursor:pointer;font-weight:600;color:var(--muted);padding:6px 0}
 <div class="toast" id="toast" hidden></div>
 
 <script src="storage.js"></script>
+<script src="starter.js"></script>
 <!-- ============ PART 4: JAVASCRIPT — how the app behaves (saving, maths, buttons) ============ -->
 <script>
 (function(){
@@ -356,7 +360,7 @@ function toast(msg){const t=$("#toast");t.textContent=msg;t.hidden=false;clearTi
 
 (async()=>{
   const db=await openLocalDB();
-  if(!db){$("#status").textContent="Offline";app.innerHTML=`<div class="top"><div><h1>Neel's Gym Log</h1></div></div><div class="empty">Open this page in Claude to load your workouts. Your data is stored with the page and needs a signed-in session.</div>`;return}
+  if(!db){$("#status").textContent="Offline";app.innerHTML=`<div class="top"><div><h1>Gym Log</h1></div></div><div class="empty">Open this page in Claude to load your workouts. Your data is stored with the page and needs a signed-in session.</div>`;return}
   S.db=db;
   db.doc("config/exercises").onSnapshot(snap=>{S.exercises=snap.exists?(snap.data().list||[]).slice():[];S.loadedEx=true;safeRender()},
     e=>{$("#status").textContent="Connection lost";console.error(e)});
@@ -387,7 +391,7 @@ function header(sub,title){
 function render(){
   renderTabs();
   if(!S.loadedEx||!S.loadedHist)return;
- if(!S.exercises.length){app.innerHTML=header("","Gym Log")+`<div class="empty">Welcome! Load your backup file below to bring in your workouts.</div>`+backupSection();return}
+  if(!S.exercises.length){app.innerHTML=header("","Gym Log")+`<div class="card stack" style="padding:16px"><div><b style="font-size:18px">Welcome!</b><div class="muted small" style="margin-top:4px">Start with the default plan: ${window.STARTER_PLAN.filter(e=>e.active).length} exercises across Back &amp; Biceps, Legs, Shoulders &amp; Arms and Core. You can change anything on the Plan tab.</div></div><button class="btn primary" data-act="starter">Start with the default plan</button></div>`+backupSection(true);return}
   app.innerHTML={log:viewLog,progress:viewProgress,history:viewHistory,plan:viewPlan,ideas:viewIdeas}[S.tab]();
   if(S.tab==="progress"&&S.pex)drawChart();
 }
@@ -938,13 +942,13 @@ async function doRestore(){
   await Promise.all([...ids].map(id=>writeHistory(id,R.data.history[id]||[])));
   S.restore=null;toast(`Restored ${R.nSessions} sessions across ${R.nEx} exercises`);
 }
-function backupSection(){
+function backupSection(welcome){
   const last=S.meta.lastBackup;const d=daysSince(last);
-  let h=`<h2 class="sec">Back up &amp; restore</h2><div class="card stack" style="padding:14px">`;
-  h+=`<div class="row between wrapr"><div class="grow" style="min-width:180px"><div style="font-weight:600">Back up</div><div class="muted small">Saves everything (your plan, setups and all sessions) as one file. Keep it in iCloud Drive or Files.</div><div class="small" style="margin-top:4px">${last?`Last backup: <b>${d===0?"today":d===1?"yesterday":d+" days ago"}</b>`:`<b style="color:var(--warn)">No backup yet</b>`}</div></div><button class="btn primary" data-act="backup">Back up now</button></div>`;
-  h+=`<hr style="border:0;border-top:1px solid var(--line);margin:4px 0;width:100%">`;
-  h+=`<div><div style="font-weight:600">Restore</div><div class="muted small">Load a backup file. It replaces what's in the app now, so back up first if you're unsure.</div></div>`;
-  h+=`<label class="btn ghost" style="align-self:flex-start;cursor:pointer">Choose backup file…<input type="file" id="restore-file" accept=".json,application/json" hidden></label>`;
+  let h=`<h2 class="sec">${welcome?"Already have a backup?":"Back up &amp; restore"}</h2><div class="card stack" style="padding:14px">`;
+  if(!welcome)h+=`<div class="row between wrapr"><div class="grow" style="min-width:180px"><div style="font-weight:600">Back up</div><div class="muted small">Saves everything (your plan, setups and all sessions) as one file. Keep it in iCloud Drive or Files.</div><div class="small" style="margin-top:4px">${last?`Last backup: <b>${d===0?"today":d===1?"yesterday":d+" days ago"}</b>`:`<b style="color:var(--warn)">No backup yet</b>`}</div></div><button class="btn primary" data-act="backup">Back up now</button></div>`;
+  if(!welcome)h+=`<hr style="border:0;border-top:1px solid var(--line);margin:4px 0;width:100%">`;
+  h+=welcome?`<div class="muted small">Load your backup file (for example from iCloud Drive) to bring in your plan and all your sessions.</div>`:`<div><div style="font-weight:600">Restore</div><div class="muted small">Load a backup file. It replaces what's in the app now, so back up first if you're unsure.</div></div>`;
+  h+=`<label class="btn ghost" style="align-self:flex-start;cursor:pointer">${welcome?"Restore from a backup…":"Choose backup file…"}<input type="file" id="restore-file" accept=".json,application/json" hidden></label>`;
   if(S.restore){const R=S.restore;
     h+=`<div class="lastbox stack" style="gap:8px"><div><b>${esc(R.name)}</b><br><span class="small">${R.nSessions} sessions across ${R.nEx} exercises${R.exportedAt?` · backed up ${esc(new Date(R.exportedAt).toLocaleString("en-GB",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}))}`:""}</span></div><div class="btns">${confirmBtn("restore","Replace my data with this backup","Tap again to replace everything",'',"btn small dangerfill")}<button class="btn small ghost" data-act="restorecancel">Cancel</button></div></div>`}
   return h+`</div>`;
@@ -983,10 +987,11 @@ document.addEventListener("click",async ev=>{
   else if(a==="susave"){const val=($("#su-"+v)||{}).value||"";S.suEdit=null;await patchExercise(v,{setup:val.trim()});toast("Setup saved")}
   else if(a==="rest")startRest(+v);
   else if(a==="reststop")stopRest();
-  else if(a==="restadd"){restEnd+=30000;tickRest()}
+  else if(a==="restadd"){restEnd+=30000;rang=false;tickRest()}
   else if(a==="pex"){S.pex=v||null;S.edit=null;S.sel=null;S.metric="main";if(!v)setG(S.group);render();scrollTo(0,0)}
   else if(a==="metric"){S.metric=v;render()}
   else if(a==="backup")await doBackup();
+  else if(a==="starter"){await writeExercises(window.STARTER_PLAN.map(e=>({...e})));toast("Default plan loaded. Change it any time on the Plan tab.")}
   else if(a==="restorecancel"){S.restore=null;render()}
   else if(a==="ideafor"){S.ideaFor=v||null;S.tab="ideas";S.ideaOpen=null;S.open=null;render();scrollTo(0,0)}
   else if(a==="ideaarea"){S.ideaArea=v;render()}
@@ -1077,15 +1082,54 @@ async function saveEx(id){
 }
 
 /* ---------- rest timer ---------- */
-let restEnd=0,restIv=null,wake=null;
-function startRest(sec){restEnd=Date.now()+sec*1000;clearInterval(restIv);restIv=setInterval(tickRest,250);tickRest();
-  try{navigator.wakeLock&&navigator.wakeLock.request("screen").then(w=>wake=w).catch(()=>{})}catch(e){}}
-function stopRest(){clearInterval(restIv);restIv=null;$("#rest").hidden=true;try{wake&&wake.release();wake=null}catch(e){}}
+/* The bar is built once; each tick only updates the numbers. (Rebuilding it 4 times a
+   second replaced the buttons mid-tap, so Stop and Close often didn't register.) */
+let restEnd=0,restIv=null,wake=null,rang=false,actx=null;
+function restEl(){
+  const el=$("#rest");
+  if(!el.firstChild)el.innerHTML=`<div role="timer" aria-live="off"><b id="rest-t"></b><span id="rest-l" style="font-size:14px"></span><button type="button" id="rest-add" data-act="restadd">+30s</button><button type="button" id="rest-stop" data-act="reststop"></button></div>`;
+  return el;
+}
+function unlockAudio(){
+  /* iPhone only allows sound that a tap has unlocked, so we set it up when you start the timer */
+  try{
+    if(navigator.audioSession)navigator.audioSession.type="playback";   // play even with the silent switch on (newer iPhones)
+    actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+    if(actx.state==="suspended")actx.resume();
+    const o=actx.createOscillator(),g=actx.createGain();g.gain.value=0;o.connect(g).connect(actx.destination);o.start();o.stop(actx.currentTime+0.01);
+  }catch(e){}
+}
+function ring(){
+  try{
+    if(!actx)return;if(actx.state==="suspended")actx.resume();
+    const t0=actx.currentTime;
+    [0,0.35,0.7,1.4,1.75,2.1].forEach(d=>{          // two bursts of three beeps
+      const o=actx.createOscillator(),g=actx.createGain();
+      o.type="sine";o.frequency.value=d<1?880:1175;
+      g.gain.setValueAtTime(0.0001,t0+d);g.gain.exponentialRampToValueAtTime(0.6,t0+d+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t0+d+0.25);
+      o.connect(g).connect(actx.destination);o.start(t0+d);o.stop(t0+d+0.3);
+    });
+  }catch(e){}
+  try{navigator.vibrate&&navigator.vibrate([300,150,300,150,300])}catch(e){}
+}
+function startRest(sec){
+  unlockAudio();
+  restEnd=Date.now()+sec*1000;rang=false;clearInterval(restIv);restIv=setInterval(tickRest,250);tickRest();
+  try{navigator.wakeLock&&navigator.wakeLock.request("screen").then(w=>wake=w).catch(()=>{})}catch(e){}
+}
+function stopRest(){
+  clearInterval(restIv);restIv=null;$("#rest").hidden=true;
+  try{wake&&wake.release();wake=null}catch(e){}
+}
 function tickRest(){
-  const el=$("#rest");const left=Math.round((restEnd-Date.now())/1000);const done=left<=0;
+  const el=restEl();const left=Math.round((restEnd-Date.now())/1000);const done=left<=0;
   el.hidden=false;el.classList.toggle("done",done);
-  el.innerHTML=`<div><b>${done?"Go!":`${Math.floor(left/60)}:${String(left%60).padStart(2,"0")}`}</b><span style="font-size:14px">${done?"Next set":"Rest"}</span>${done?"":`<button data-act="restadd">+30s</button>`}<button data-act="reststop">${done?"Close":"Stop"}</button></div>`;
-  if(left<-20)stopRest();
+  $("#rest-t").textContent=done?"Go!":`${Math.floor(left/60)}:${String(left%60).padStart(2,"0")}`;
+  $("#rest-l").textContent=done?"Next set":"Rest";
+  $("#rest-add").hidden=done;
+  $("#rest-stop").textContent=done?"Close":"Stop";
+  if(done&&!rang){rang=true;ring()}
+  if(left<-30)stopRest();
 }
 window.addEventListener("resize",()=>{if(S.tab==="progress"&&S.pex)drawChart()});
 $("#today").textContent=new Date().toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"});

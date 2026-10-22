@@ -12,11 +12,12 @@
   Your workout data is NOT handled here. That lives in IndexedDB (storage.js).
   This file only deals with the app's code, icons and fonts.
 */
-const CACHE = "gym-log-v1";   // change the number to force every phone to start fresh
+const CACHE = "gym-log-v3";   // change the number to force every phone to start fresh
 const APP_FILES = [
   "./",
   "index.html",
   "storage.js",
+  "starter.js",
   "manifest.webmanifest",
   "icon-192.png",
   "icon-512.png",
